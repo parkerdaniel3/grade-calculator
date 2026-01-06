@@ -1,19 +1,19 @@
-# grade_calculator_app.py
+
 import math
 import pandas as pd
 import streamlit as st
 
-# ---------- Page setup ----------
+
 st.set_page_config(page_title="Grade Calculator", page_icon="📘", layout="centered")
 st.title("📘 Grade Calculator")
 st.caption("Figure out what you need on the final to hit your target overall grade.")
 
-# Quick reset if session state ever gets weird
+
 if st.sidebar.button("🔄 Reset all"):
     st.session_state.clear()
     st.rerun()
 
-# ---------- Helper functions ----------
+
 def interpret_weight(value, unit):
     """Accept weight as Percent or Decimal -> return decimal in [0,1]."""
     if unit == "Percent":
@@ -46,7 +46,7 @@ def compute_current_and_final(categories, final_name):
 
         avg = avg_with_drops(c.get("scores", []), c.get("drop_n", 0))
         if avg is not None:
-            current += (avg / 100.0) * c["weight"] * 100.0  # keep current on 0–100 scale
+            current += (avg / 100.0) * c["weight"] * 100.0  
 
     return current, final_w, final_found
 
@@ -62,7 +62,7 @@ def scenarios_table(current, final_w):
     overalls = [current + final_w * f for f in labels]
     return labels, overalls
 
-# ---------- UI (Form) ----------
+
 with st.form("grade_form"):
     st.subheader("Course & Categories")
 
@@ -75,7 +75,7 @@ with st.form("grade_form"):
         value=3
     )
 
-    # Placeholder suggestions for names (faded hints)
+    
     default_names = ["Homework", "Quizzes", "Exams", "Projects", "Participation", "Final Exam"]
 
     categories = []
@@ -83,7 +83,7 @@ with st.form("grade_form"):
         with st.expander(f"Category {i+1}", expanded=(i < 2)):
             suggested = default_names[i] if i < len(default_names) else "e.g., Labs"
 
-            # Category name input with a placeholder (faded suggestion)
+            
             cat_name_input = st.text_input(
                 f"Name for category {i+1}",
                 value="",
@@ -93,7 +93,7 @@ with st.form("grade_form"):
             entered = bool(cat_name_input.strip())
             resolved_name = cat_name_input.strip() or suggested
 
-            # Weights
+           
             c1, c2 = st.columns([2, 1])
             with c1:
                 raw_weight = st.number_input(
@@ -112,7 +112,7 @@ with st.form("grade_form"):
                 )
             weight = interpret_weight(raw_weight, unit)
 
-            # Drop lowest scores
+            
             drop_n = st.number_input(
                 f"Drop how many lowest scores in {resolved_name}?",
                 min_value=0,
@@ -121,21 +121,21 @@ with st.form("grade_form"):
                 key=f"cat{i}_drop"
             )
 
-            # --- Editable scores table (add/remove rows) ---
+            
             st.markdown(f"**Scores for {resolved_name}**")
             df_key = f"cat{i}_df"
 
-            # Load from session or initialize with correct dtypes
+            
             df = st.session_state.get(df_key)
             if df is None:
                 df = pd.DataFrame(
                     {
-                        "Item": pd.Series([""], dtype="object"),             # text
-                        "Score": pd.Series([float("nan")], dtype="float64"), # numeric
+                        "Item": pd.Series([""], dtype="object"),             
+                        "Score": pd.Series([float("nan")], dtype="float64"), 
                     }
                 )
             else:
-                # Ensure required columns exist and have the right dtypes
+                
                 if "Item" not in df.columns or "Score" not in df.columns:
                     df = pd.DataFrame(
                         {
@@ -151,8 +151,8 @@ with st.form("grade_form"):
 
             edited_df = st.data_editor(
                 df,
-                num_rows="dynamic",       # enables the “Add row” button
-                width="stretch",          # replaces deprecated use_container_width
+                num_rows="dynamic",       
+                width="stretch",          
                 key=f"cat{i}_editor",
                 column_config={
                     "Item": st.column_config.TextColumn("Item (optional)", width="medium"),
@@ -162,13 +162,13 @@ with st.form("grade_form"):
                 },
             )
 
-            # Persist edits
+            
             st.session_state[df_key] = edited_df
 
-            # Extract numeric scores (ignore blanks)
+            
             scores = [float(x) for x in pd.to_numeric(edited_df["Score"], errors="coerce").dropna().tolist()]
 
-            # Live average display
+            
             avg_now = avg_with_drops(scores, drop_n)
             if avg_now is not None:
                 st.caption(f"Current average (after drops): **{avg_now:.2f}%**")
@@ -181,7 +181,7 @@ with st.form("grade_form"):
                 "drop_n": drop_n
             })
 
-    # Normalize weights if needed (outside loop, still inside form)
+    
     total_weight = sum(c["weight"] for c in categories)
     normalized = False
     if total_weight > 0 and abs(total_weight - 1.0) > 1e-2:
@@ -189,7 +189,7 @@ with st.form("grade_form"):
         for c in categories:
             c["weight"] = c["weight"] / total_weight
 
-    # Final exam picker: prefer only names the user typed (fallback to all names)
+    
     typed_options = [c["name"] for c in categories if c.get("entered")]
     name_options = typed_options if typed_options else [c["name"] for c in categories]
 
@@ -217,10 +217,10 @@ with st.form("grade_form"):
         value=90.0
     )
 
-    # Submit must be the last line inside the form
+    
     submitted = st.form_submit_button("Calculate")
 
-# ---------- Results ----------
+
 if submitted:
     if total_weight <= 0:
         st.error("Total weight is zero. Please enter valid weights.")
@@ -241,7 +241,7 @@ if submitted:
 
             req_final = required_final_score(current, final_w, target)
             best = current + final_w * 100.0
-            worst = current  # final = 0
+            worst = current  
 
             st.write(f"**Final exam weight:** `{final_w*100:.2f}%`")
             st.write(f"**Best possible overall (100 on final):** `{best:.2f}`")
@@ -264,7 +264,7 @@ if submitted:
                     f"To achieve `{target:.2f}` overall, you need **`{req_final:.2f}`** on the final exam."
                 )
 
-            # What-if scenarios
+            
             st.markdown("---")
             st.subheader("What-if Scenarios")
             labels, overalls = scenarios_table(current, final_w)
@@ -275,5 +275,5 @@ if submitted:
                 }
             )
 
-# ---------- Footer ----------
+
 st.caption("Tip: Use the expanders to enter scores, and choose Percent or Decimal for weights.")
